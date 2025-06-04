@@ -1,0 +1,114 @@
+# InvoicePro Local Setup Guide
+
+## Prerequisites
+- Node.js (v18 or higher)
+- PostgreSQL (v14 or higher)
+- npm (comes with Node.js)
+
+## Database Setup
+1. Create a PostgreSQL database named "invoicepro"
+2. Create a `.env` file in the root directory with the following content:
+   ```
+   DATABASE_URL=postgres://postgres:your_password@localhost:5432/invoicepro
+   JWT_SECRET=your_jwt_secret_key
+   ```
+   Replace `your_password` with your PostgreSQL password and `your_jwt_secret_key` with a secure random string.
+
+## Project Structure
+```
+invoicepro/
+├── client/             # Frontend React application
+├── server/             # Backend Express server
+├── shared/             # Shared types and utilities
+└── uploads/            # Directory for uploaded files (created automatically)
+```
+
+## Installation Steps
+
+1. Install dependencies for the entire project:
+   ```bash
+   npm install
+   ```
+
+2. Install server dependencies:
+   ```bash
+   cd server
+   npm install express pg drizzle-orm @types/express @types/pg pdfkit multer @types/multer dotenv cookie-parser @types/cookie-parser cors @types/cors
+   ```
+
+3. Install client dependencies:
+   ```bash
+   cd ../client
+   npm install @tanstack/react-query wouter @hookform/resolvers zod react-hook-form @radix-ui/react-dialog @radix-ui/react-select @radix-ui/react-slot lucide-react class-variance-authority clsx tailwind-merge tailwindcss postcss autoprefixer @types/node @types/react @types/react-dom typescript
+   ```
+
+4. Install shared dependencies:
+   ```bash
+   cd ../shared
+   npm install drizzle-orm pg
+   ```
+
+## Required Dependencies
+
+### Server Dependencies
+- express: Web framework
+- pg: PostgreSQL client
+- drizzle-orm: TypeScript ORM
+- @types/express: TypeScript types for Express
+- @types/pg: TypeScript types for PostgreSQL
+- pdfkit: PDF generation
+- multer: File upload handling
+- @types/multer: TypeScript types for Multer
+- dotenv: Environment variable management
+- cookie-parser: Cookie parsing middleware
+- @types/cookie-parser: TypeScript types for cookie-parser
+- cors: Cross-Origin Resource Sharing
+- @types/cors: TypeScript types for CORS
+
+### Client Dependencies
+- @tanstack/react-query: Data fetching and caching
+- wouter: Routing
+- @hookform/resolvers: Form validation
+- zod: Schema validation
+- react-hook-form: Form handling
+- @radix-ui/react-dialog: Dialog component
+- @radix-ui/react-select: Select component
+- @radix-ui/react-slot: Slot component
+- lucide-react: Icons
+- class-variance-authority: Class name utilities
+- clsx: Class name utilities
+- tailwind-merge: Tailwind CSS utilities
+- tailwindcss: CSS framework
+- postcss: CSS processing
+- autoprefixer: CSS vendor prefixing
+- @types/node: TypeScript types for Node.js
+- @types/react: TypeScript types for React
+- @types/react-dom: TypeScript types for React DOM
+- typescript: TypeScript support
+
+### Shared Dependencies
+- drizzle-orm: TypeScript ORM
+- pg: PostgreSQL client
+
+## Running the Application
+
+1. Start the server:
+   ```bash
+   cd server
+   npm run dev
+   ```
+
+2. Start the client:
+   ```bash
+   cd client
+   npm run dev
+   ```
+
+3. Access the application at http://127.0.0.1:5000
+
+## Additional Notes
+- The server runs on port 3000 by default
+- The client runs on port 5173 by default
+- Make sure PostgreSQL is running before starting the application
+- The uploads directory will be created automatically when the first file is uploaded
+- All database migrations are handled automatically by Drizzle ORM 
