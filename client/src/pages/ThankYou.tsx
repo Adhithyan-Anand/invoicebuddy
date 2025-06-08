@@ -25,8 +25,9 @@ export default function ThankYou({ amount }: { amount?: string }) {
         {displayAmount && (
           <p className="text-xl mb-2">Amount Paid: <span className="font-semibold">₹{parseFloat(displayAmount).toLocaleString()}</span></p>
         )}
-        <p className="text-gray-600 mb-4">Your payment was successful. You will be redirected to the Invoice Buddy home page shortly.</p>
-        <p className="text-sm text-gray-400">If you are not redirected, <a href="/" className="text-blue-600 underline">click here</a>.</p>
+        <p className="text-gray-600 mb-4">Your payment was successful.</p>
+        <p className="text-gray-600 mb-4">This payment and Invoice process is done by <a href="https://www.invoicebuddy.in" className="text-blue-600 underline">Invoice Buddy</a></p>
+        <p className="text-sm text-gray-400">You will be redirected to the Invoice Buddy home page shortly. If you are not redirected, <a href="/" className="text-blue-600 underline">click here</a>.</p>
       </div>
     </div>
   );

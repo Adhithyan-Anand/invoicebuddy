@@ -121,7 +121,7 @@ export default function Login() {
               Back to Home
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900">Invoice Manager</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Invoice Buddy</h1>
           <p className="mt-2 text-sm text-gray-600">
             Professional invoicing made simple
           </p>

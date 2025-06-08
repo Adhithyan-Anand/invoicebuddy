@@ -240,7 +240,7 @@ export default function Invoices() {
                   <TableRow key={invoice.id}>
                     <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
                     <TableCell>{invoice.customer?.name || "Unknown"}</TableCell>
-                    <TableCell>${parseFloat(invoice.total).toLocaleString()}</TableCell>
+                    <TableCell>₹{parseFloat(invoice.total).toLocaleString()}</TableCell>
                     <TableCell>{getStatusBadge(invoice.status)}</TableCell>
                     <TableCell>{new Date(invoice.date).toLocaleDateString()}</TableCell>
                     <TableCell>{new Date(invoice.dueDate).toLocaleDateString()}</TableCell>

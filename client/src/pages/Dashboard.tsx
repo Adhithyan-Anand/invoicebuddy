@@ -9,10 +9,17 @@ import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { IndianRupee } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
   const { isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const displayName =
+    user?.firstName && user?.lastName
+      ? `${user.firstName} ${user.lastName}`
+      : user?.email || "User";
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -78,12 +85,11 @@ export default function Dashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Dashboard</h1>
-          <p className="text-sm text-slate-600 mt-1">Welcome back! Here's your business overview.</p>
+          <p className="text-sm text-slate-600 mt-1">
+            Welcome back <span className="font-bold">{displayName}</span>! Here's your business overview.
+          </p>
         </div>
         <div className="flex items-center space-x-4">
-          <Button variant="outline" size="sm">
-            Export Data
-          </Button>
           <Link href="/invoices">
             <Button size="sm" className="bg-primary hover:bg-primary/90">
               <Plus className="w-4 h-4 mr-2" />
@@ -101,7 +107,7 @@ export default function Dashboard() {
               <div>
                 <p className="text-sm font-medium text-slate-600">Total Revenue</p>
                 <p className="text-2xl font-bold text-slate-900 mt-2">
-                  ${stats?.totalRevenue?.toLocaleString() || "0"}
+                  ₹{stats?.totalRevenue?.toLocaleString() || "0"}
                 </p>
                 <p className="text-sm text-green-600 mt-1">
                   <TrendingUp className="w-3 h-3 inline mr-1" />
@@ -109,7 +115,7 @@ export default function Dashboard() {
                 </p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-green-600" />
+                <IndianRupee className="w-6 h-6 text-green-600" />
               </div>
             </div>
           </CardContent>
@@ -153,7 +159,7 @@ export default function Dashboard() {
               <div>
                 <p className="text-sm font-medium text-slate-600">Pending Amount</p>
                 <p className="text-2xl font-bold text-slate-900 mt-2">
-                  ${stats?.pendingAmount?.toLocaleString() || "0"}
+                  ₹{stats?.pendingAmount?.toLocaleString() || "0"}
                 </p>
                 <p className="text-sm text-orange-600 mt-1">
                   <Clock className="w-3 h-3 inline mr-1" />
@@ -203,7 +209,7 @@ export default function Dashboard() {
                     {recentInvoices.map((invoice: any) => (
                       <TableRow key={invoice.id}>
                         <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
-                        <TableCell>${parseFloat(invoice.total).toLocaleString()}</TableCell>
+                        <TableCell>₹{parseFloat(invoice.total).toLocaleString()}</TableCell>
                         <TableCell>{getStatusBadge(invoice.status)}</TableCell>
                         <TableCell>{new Date(invoice.date).toLocaleDateString()}</TableCell>
                       </TableRow>

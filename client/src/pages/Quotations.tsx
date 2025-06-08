@@ -183,7 +183,7 @@ export default function Quotations() {
                   <TableRow key={quotation.id}>
                     <TableCell className="font-medium">{quotation.quotationNumber}</TableCell>
                     <TableCell>{quotation.customer?.name || "Unknown"}</TableCell>
-                    <TableCell>${parseFloat(quotation.total).toLocaleString()}</TableCell>
+                    <TableCell>₹{parseFloat(quotation.total).toLocaleString()}</TableCell>
                     <TableCell>{getStatusBadge(quotation.status)}</TableCell>
                     <TableCell>{new Date(quotation.date).toLocaleDateString()}</TableCell>
                     <TableCell>{new Date(quotation.validUntil).toLocaleDateString()}</TableCell>

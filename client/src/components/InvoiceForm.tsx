@@ -383,7 +383,7 @@ export default function InvoiceForm({ invoice, onClose }: InvoiceFormProps) {
                       />
                     </TableCell>
                     <TableCell>
-                      <span className="font-medium">${item.amount.toFixed(2)}</span>
+                      <span className="font-medium">₹{item.amount.toFixed(2)}</span>
                     </TableCell>
                     <TableCell>
                       <Button
@@ -406,15 +406,15 @@ export default function InvoiceForm({ invoice, onClose }: InvoiceFormProps) {
             <div className="w-64 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-slate-600">Subtotal:</span>
-                <span className="font-medium">${subtotal.toFixed(2)}</span>
+                <span className="font-medium">₹{subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-slate-600">Tax:</span>
-                <span className="font-medium">${taxAmount.toFixed(2)}</span>
+                <span className="font-medium">₹{taxAmount.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-lg font-semibold border-t border-slate-200 pt-2">
                 <span>Total:</span>
-                <span>${total.toFixed(2)}</span>
+                <span>₹{total.toFixed(2)}</span>
               </div>
             </div>
           </div>
