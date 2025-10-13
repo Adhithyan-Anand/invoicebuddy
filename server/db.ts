@@ -11,5 +11,18 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+import fs from "fs";
+
+const ssl =
+  process.env.DATABASE_URL?.includes("rds.amazonaws.com")
+    ? {
+        ca: fs.readFileSync("rds-ca.pem").toString(),
+        rejectUnauthorized: true,
+      }
+    : undefined;
+
+export const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl,
+});
 export const db = drizzle(pool, { schema });

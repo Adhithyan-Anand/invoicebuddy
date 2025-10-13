@@ -5,7 +5,7 @@ import { storage as dbStorage } from "./storage";
 import { authenticate, hashPassword, verifyPassword, generateToken } from "./auth";
 import { z } from "zod";
 import dotenv from 'dotenv';
-import { generateInvoicePDF, generateQuotationPDF } from './pdfGenerator';
+import { generateInvoicePDF } from './pdfGenerator';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -14,6 +14,25 @@ import { Resend } from 'resend';
 import { User } from '@shared/schema';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
+import {
+  resolveEmailTemplate,
+  resolveDocumentTemplate,
+  listEmailTemplates,
+  createEmailTemplate,
+  updateEmailTemplate,
+  deleteEmailTemplate,
+  listDocumentTemplates,
+  createDocumentTemplate,
+  updateDocumentTemplate,
+  deleteDocumentTemplate,
+} from './templates/repository';
+import {
+  buildDefaultInvoiceEmailHtml,
+  buildDefaultInvoiceEmailSubject,
+  buildDefaultPaymentConfirmationHtml,
+  buildDefaultPaymentConfirmationSubject,
+  compileUserTemplate,
+} from './utils/emailRenderer';
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -169,7 +188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create a URL for the uploaded file
-      const fileUrl = `/uploads/${req.file.filename}`;
+      const fileUrl = `${process.env.FRONTEND_URL}/uploads/${req.file.filename}`;
       console.log('File uploaded successfully:', {
         filename: req.file.filename,
         url: fileUrl,
@@ -547,28 +566,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Invoice not found' });
       }
       
-      // Generate PDF as a Buffer
-      const doc = generateInvoicePDF(invoice);
-      const chunks: Buffer[] = [];
-      
-      // Create a promise that resolves when the PDF is fully generated
-      const pdfPromise = new Promise<Buffer>((resolve, reject) => {
-        doc.on('data', (chunk: Buffer) => chunks.push(chunk));
-        doc.on('end', () => resolve(Buffer.concat(chunks)));
-        doc.on('error', reject);
-        doc.end();
-      });
+      // Use jsreport cloud to render invoice PDF
+      const { renderInvoicePdf } = await import('./invoicePdfService');
+      const pdfStream = await renderInvoicePdf(invoice);
 
-      // Wait for the PDF to be fully generated
-      const pdfBuffer = await pdfPromise;
-      console.log('PDF generated successfully, size:', pdfBuffer.length);
-      
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename=invoice-${invoice.invoiceNumber}.pdf`);
-      res.setHeader('Content-Length', pdfBuffer.length);
-      
-      // Send the PDF buffer
-      res.send(pdfBuffer);
+      pdfStream.pipe(res);
     } catch (error) {
       console.error('Error generating invoice PDF:', error);
       res.status(500).json({ message: 'Failed to generate PDF' });
@@ -587,28 +591,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Quotation not found' });
       }
       
-      // Generate PDF as a Buffer
-      const doc = generateQuotationPDF(quotation);
-      const chunks: Buffer[] = [];
-      
-      // Create a promise that resolves when the PDF is fully generated
-      const pdfPromise = new Promise<Buffer>((resolve, reject) => {
-        doc.on('data', (chunk: Buffer) => chunks.push(chunk));
-        doc.on('end', () => resolve(Buffer.concat(chunks)));
-        doc.on('error', reject);
-        doc.end();
-      });
+      // Use jsreport cloud to render quotation PDF
+      const { renderQuotationPdf } = await import('./quotationPdfService');
+      const pdfStream = await renderQuotationPdf(quotation);
 
-      // Wait for the PDF to be fully generated
-      const pdfBuffer = await pdfPromise;
-      console.log('PDF generated successfully, size:', pdfBuffer.length);
-      
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename=quotation-${quotation.quotationNumber}.pdf`);
-      res.setHeader('Content-Length', pdfBuffer.length);
-      
-      // Send the PDF buffer
-      res.send(pdfBuffer);
+      pdfStream.pipe(res);
     } catch (error) {
       console.error('Error generating quotation PDF:', error);
       res.status(500).json({ message: 'Failed to generate PDF' });
@@ -682,146 +671,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         attachmentSize: pdfBuffer.length
       });
 
+      // Resolve email template (customer -> company -> user), fallback to default
+      const ctx = {
+        frontendUrl: process.env.FRONTEND_URL,
+        company: invoice.company || null,
+        customer: invoice.customer || null,
+        invoice: {
+          id: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+          date: invoice.date,
+          dueDate: invoice.dueDate,
+          subtotal: Number(invoice.subtotal),
+          taxAmount: Number(invoice.taxAmount),
+          total: Number(invoice.total),
+          notes: invoice.notes || null,
+          paymentToken: invoice.paymentToken || null,
+        },
+        payUrl: `${process.env.FRONTEND_URL || 'http://127.0.0.1:5000'}/pay/${invoice.paymentToken ?? ''}`,
+      };
+
+      const customTemplate = await resolveEmailTemplate(userId, 'invoice_email', {
+        customerId: invoice.customer.id,
+        companyId: invoice.company?.id,
+      });
+
+      let subject = buildDefaultInvoiceEmailSubject(ctx);
+      let html = buildDefaultInvoiceEmailHtml(ctx);
+      if (customTemplate) {
+        subject = compileUserTemplate(customTemplate.subject, ctx);
+        html = compileUserTemplate(customTemplate.html, ctx);
+      }
+
       const emailResponse = await resend.emails.send({
         from: 'invoicebuddy@adhithyaelectronics.in',
         to: [customerEmail],
-        subject: `Invoice ${invoice.invoiceNumber} from ${invoice.company?.name || 'Your Company'}`,
-        html: `
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <meta charset="utf-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>Invoice ${invoice.invoiceNumber}</title>
-              <style>
-                body {
-                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-                  line-height: 1.6;
-                  color: #333;
-                  margin: 0;
-                  padding: 0;
-                }
-                .container {
-                  max-width: 600px;
-                  margin: 0 auto;
-                  padding: 20px;
-                }
-                .header {
-                  text-align: center;
-                  padding: 20px 0;
-                  background: #f8f9fa;
-                  border-radius: 8px;
-                  margin-bottom: 30px;
-                }
-                .company-name {
-                  font-size: 24px;
-                  font-weight: bold;
-                  color: #2563eb;
-                  margin: 0;
-                }
-                .invoice-title {
-                  font-size: 20px;
-                  color: #4b5563;
-                  margin: 10px 0;
-                }
-                .details {
-                  background: #ffffff;
-                  border-radius: 8px;
-                  padding: 20px;
-                  margin-bottom: 30px;
-                  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                }
-                .details-row {
-                  display: flex;
-                  justify-content: space-between;
-                  margin-bottom: 10px;
-                }
-                .label {
-                  font-weight: 600;
-                  color: #4b5563;
-                }
-                .value {
-                  color: #1f2937;
-                }
-                .amount {
-                  font-size: 18px;
-                  font-weight: bold;
-                  color: #2563eb;
-                }
-                .footer {
-                  text-align: center;
-                  padding: 20px;
-                  color: #6b7280;
-                  font-size: 14px;
-                }
-                .button {
-                  display: inline-block;
-                  padding: 12px 24px;
-                  background-color: #2563eb;
-                  color: white;
-                  text-decoration: none;
-                  border-radius: 6px;
-                  margin: 20px 0;
-                }
-                .note {
-                  background: #f3f4f6;
-                  padding: 15px;
-                  border-radius: 6px;
-                  margin: 20px 0;
-                  font-size: 14px;
-                  color: #4b5563;
-                }
-              </style>
-            </head>
-            <body>
-              <div class="container">
-                <div class="header">
-                  <h1 class="company-name">${invoice.company?.name || 'Your Company'}</h1>
-                  <p class="invoice-title">Invoice #${invoice.invoiceNumber}</p>
-                </div>
-                
-                <div class="details">
-                  <div class="details-row">
-                    <span class="label">Invoice Date:</span>
-                    <span class="value">${new Date(invoice.date).toLocaleDateString()}</span>
-                  </div>
-                  <div class="details-row">
-                    <span class="label">Due Date:</span>
-                    <span class="value">${new Date(invoice.dueDate).toLocaleDateString()}</span>
-                  </div>
-                  <div class="details-row">
-                    <span class="label">Customer:</span>
-                    <span class="value">${invoice.customer?.name}</span>
-                  </div>
-                  <div class="details-row">
-                    <span class="label">Total Amount:</span>
-                    <span class="amount">₹${Number(invoice.total).toFixed(2)}</span>
-                  </div>
-                </div>
-
-                ${invoice.notes ? `
-                <div class="note">
-                  <strong>Notes:</strong><br>
-                  ${invoice.notes}
-                </div>
-                ` : ''}
-
-                <div style="text-align: center;">
-                  <p>Please find your invoice attached to this email.</p>
-                  <a href="${process.env.FRONTEND_URL || 'http://127.0.0.1:5000'}/pay/${invoice.paymentToken}" class="button" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 20px 0;">
-                    Pay Now
-                  </a>
-                  <p>Thank you for your business!</p>
-                </div>
-
-                <div class="footer">
-                  <p>This is an automated message, please do not reply directly to this email.</p>
-                  ${invoice.company?.email ? `<p>For any queries, please contact: ${invoice.company.email}</p>` : ''}
-                </div>
-              </div>
-            </body>
-          </html>
-        `,
+        subject,
+        html,
         attachments: [
           {
             filename: `Invoice-${invoice.invoiceNumber}.pdf`,
@@ -919,108 +804,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const paymentToken = String(order.notes.paymentToken);
         const invoice = await dbStorage.getInvoiceWithDetailsByToken(paymentToken);
 
+        if (!invoice) {
+          return res.status(404).json({ error: 'Invoice not found' });
+        }
         const recipient = invoice.customer?.email || invoice.user?.email;
-        if (invoice && recipient) {
-          // Send payment confirmation email
+        if (recipient) {
+          // Send payment confirmation email with custom template if available
           const resend = new Resend(process.env.RESEND_API_KEY);
+          const ctx = {
+            frontendUrl: process.env.FRONTEND_URL,
+            company: invoice.company || null,
+            customer: invoice.customer || null,
+            invoice: {
+              id: invoice.id,
+              invoiceNumber: invoice.invoiceNumber,
+              total: Number(invoice.total),
+            },
+            paymentId: razorpay_payment_id,
+            date: new Date(),
+          };
+          const customTemplate = await resolveEmailTemplate(invoice.userId, 'payment_confirmation_email', {
+            customerId: invoice.customer?.id ?? undefined,
+            companyId: invoice.company?.id,
+          });
+          let subject = buildDefaultPaymentConfirmationSubject(ctx);
+          let html = buildDefaultPaymentConfirmationHtml(ctx);
+          if (customTemplate) {
+            subject = compileUserTemplate(customTemplate.subject, ctx);
+            html = compileUserTemplate(customTemplate.html, ctx);
+          }
           await resend.emails.send({
             from: 'invoicebuddy@adhithyaelectronics.in',
             to: [recipient],
-            subject: `Payment Confirmation - Invoice ${invoice.invoiceNumber}`,
-            html: `
-              <!DOCTYPE html>
-              <html>
-                <head>
-                  <meta charset="utf-8">
-                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                  <title>Payment Confirmation</title>
-                  <style>
-                    body {
-                      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-                      line-height: 1.6;
-                      color: #333;
-                      margin: 0;
-                      padding: 0;
-                    }
-                    .container {
-                      max-width: 600px;
-                      margin: 0 auto;
-                      padding: 20px;
-                    }
-                    .header {
-                      text-align: center;
-                      padding: 20px 0;
-                      background: #f8f9fa;
-                      border-radius: 8px;
-                      margin-bottom: 30px;
-                    }
-                    .success-icon {
-                      color: #10b981;
-                      font-size: 48px;
-                      margin-bottom: 20px;
-                    }
-                    .details {
-                      background: #ffffff;
-                      border-radius: 8px;
-                      padding: 20px;
-                      margin-bottom: 30px;
-                      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                    }
-                    .details-row {
-                      display: flex;
-                      justify-content: space-between;
-                      margin-bottom: 10px;
-                    }
-                    .label {
-                      font-weight: 600;
-                      color: #4b5563;
-                    }
-                    .value {
-                      color: #1f2937;
-                    }
-                    .footer {
-                      text-align: center;
-                      padding: 20px;
-                      color: #6b7280;
-                      font-size: 14px;
-                    }
-                  </style>
-                </head>
-                <body>
-                  <div class="container">
-                    <div class="header">
-                      <div class="success-icon">✓</div>
-                      <h1 style="color: #10b981; margin: 0;">Payment Successful</h1>
-                      <p>Thank you for your payment!</p>
-                    </div>
-                    
-                    <div class="details">
-                      <div class="details-row">
-                        <span class="label">Invoice Number:</span>
-                        <span class="value">${invoice.invoiceNumber}</span>
-                      </div>
-                      <div class="details-row">
-                        <span class="label">Amount Paid:</span>
-                        <span class="value">₹${Number(invoice.total).toFixed(2)}</span>
-                      </div>
-                      <div class="details-row">
-                        <span class="label">Payment ID:</span>
-                        <span class="value">${razorpay_payment_id}</span>
-                      </div>
-                      <div class="details-row">
-                        <span class="label">Date:</span>
-                        <span class="value">${new Date().toLocaleDateString()}</span>
-                      </div>
-                    </div>
-
-                    <div class="footer">
-                      <p>This is an automated message, please do not reply directly to this email.</p>
-                      ${invoice.company?.email ? `<p>For any queries, please contact: ${invoice.company.email}</p>` : ''}
-                    </div>
-                  </div>
-                </body>
-              </html>
-            `
+            subject,
+            html,
           });
         }
 
@@ -1031,6 +848,193 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error verifying payment:', error);
       res.status(500).json({ error: 'Failed to verify payment' });
+    }
+  });
+
+  // Template management routes (Email Templates)
+  app.get('/api/templates/email', authenticate as any, async (req: any, res: Response) => {
+    try {
+      const { type, scopeType, scopeId } = req.query as { type?: string; scopeType?: string; scopeId?: string };
+      const templates = await listEmailTemplates(req.user!.id, {
+        templateType: type as any,
+        scopeType: scopeType as any,
+        scopeId: scopeId ? parseInt(scopeId) : undefined,
+      });
+      res.json(templates);
+    } catch (error) {
+      console.error('Error listing email templates:', error);
+      res.status(500).json({ message: 'Failed to list email templates' });
+    }
+  });
+
+  app.post('/api/templates/email', authenticate as any, async (req: any, res: Response) => {
+    try {
+      const schema = z.object({
+        scopeType: z.enum(['user', 'company', 'customer']),
+        scopeId: z.number().optional(),
+        templateType: z.enum(['invoice_email', 'quotation_email', 'payment_confirmation_email']),
+        subject: z.string().min(1),
+        html: z.string().min(1),
+      });
+      const data = schema.parse(req.body);
+      const created = await createEmailTemplate(req.user!.id, data as any);
+      res.json(created);
+    } catch (error) {
+      console.error('Error creating email template:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Invalid template data', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to create email template' });
+    }
+  });
+
+  app.put('/api/templates/email/:id', authenticate as any, async (req: any, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const schema = z.object({
+        scopeType: z.enum(['user', 'company', 'customer']).optional(),
+        scopeId: z.number().nullable().optional(),
+        templateType: z.enum(['invoice_email', 'quotation_email', 'payment_confirmation_email']).optional(),
+        subject: z.string().min(1).optional(),
+        html: z.string().min(1).optional(),
+      });
+      const data = schema.parse(req.body);
+      const updated = await updateEmailTemplate(req.user!.id, id, data as any);
+      res.json(updated);
+    } catch (error) {
+      console.error('Error updating email template:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Invalid template data', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to update email template' });
+    }
+  });
+
+  app.delete('/api/templates/email/:id', authenticate as any, async (req: any, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      await deleteEmailTemplate(req.user!.id, id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting email template:', error);
+      res.status(500).json({ message: 'Failed to delete email template' });
+    }
+  });
+
+  // Document (PDF appearance) templates
+  app.get('/api/templates/document', authenticate as any, async (req: any, res: Response) => {
+    try {
+      const { docType, scopeType, scopeId } = req.query as { docType?: string; scopeType?: string; scopeId?: string };
+      const templates = await listDocumentTemplates(req.user!.id, {
+        docType: docType as any,
+        scopeType: scopeType as any,
+        scopeId: scopeId ? parseInt(scopeId) : undefined,
+      });
+      res.json(templates);
+    } catch (error) {
+      console.error('Error listing document templates:', error);
+      res.status(500).json({ message: 'Failed to list document templates' });
+    }
+  });
+
+  app.post('/api/templates/document', authenticate as any, async (req: any, res: Response) => {
+    try {
+      const schema = z.object({
+        scopeType: z.enum(['user', 'company', 'customer']),
+        scopeId: z.number().optional(),
+        docType: z.enum(['invoice', 'quotation']),
+        settings: z.object({
+          primaryColor: z.string().optional(),
+          footerText: z.string().optional(),
+          // Designer layout payload: page + elements
+          layout: z.any().optional(),
+        }),
+      });
+      const data = schema.parse(req.body);
+      const created = await createDocumentTemplate(req.user!.id, data as any);
+      res.json(created);
+    } catch (error) {
+      console.error('Error creating document template:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Invalid document template data', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to create document template' });
+    }
+  });
+
+  app.put('/api/templates/document/:id', authenticate as any, async (req: any, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const schema = z.object({
+        scopeType: z.enum(['user', 'company', 'customer']).optional(),
+        scopeId: z.number().nullable().optional(),
+        docType: z.enum(['invoice', 'quotation']).optional(),
+        settings: z.object({
+          primaryColor: z.string().optional(),
+          footerText: z.string().optional(),
+          layout: z.any().optional(),
+        }).optional(),
+      });
+      const data = schema.parse(req.body);
+      const updated = await updateDocumentTemplate(req.user!.id, id, data as any);
+      res.json(updated);
+    } catch (error) {
+      console.error('Error updating document template:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Invalid document template data', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to update document template' });
+    }
+  });
+
+  app.delete('/api/templates/document/:id', authenticate as any, async (req: any, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      await deleteDocumentTemplate(req.user!.id, id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting document template:', error);
+      res.status(500).json({ message: 'Failed to delete document template' });
+    }
+  });
+
+  // Preview compile for email templates (no DB writes)
+  app.post('/api/templates/preview/email', authenticate as any, async (req: any, res: Response) => {
+    try {
+      const schema = z.object({
+        subject: z.string().min(1),
+        html: z.string().min(1),
+        context: z.any().optional(),
+      });
+      const data = schema.parse(req.body);
+      const ctx = data.context ?? {
+        frontendUrl: process.env.FRONTEND_URL || "http://127.0.0.1:5000",
+        company: { name: "Your Company", email: "info@company.test" },
+        customer: { name: "John Doe", email: "john@example.com" },
+        invoice: {
+          id: 1,
+          invoiceNumber: "INV-001",
+          date: new Date(),
+          dueDate: new Date(),
+          subtotal: 1000,
+          taxAmount: 100,
+          total: 1100,
+          notes: "Sample notes",
+          paymentToken: "sampletoken",
+        },
+        payUrl: `${process.env.FRONTEND_URL || 'http://127.0.0.1:5000'}/pay/sampletoken`,
+      };
+      const compiled = {
+        subject: compileUserTemplate(data.subject, ctx),
+        html: compileUserTemplate(data.html, ctx),
+      };
+      res.json(compiled);
+    } catch (error) {
+      console.error('Error compiling email template preview:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Invalid preview data', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to compile preview' });
     }
   });
 

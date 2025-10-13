@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +19,21 @@ export default function Login() {
   });
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Google OAuth: After redirect, refetch user and route to dashboard if authenticated
+  useEffect(() => {
+    // Only run if not already authenticated
+    if (window.location.pathname === "/login" || window.location.pathname === "/register") {
+      fetch("/api/auth/user", { credentials: "include" })
+        .then(res => res.ok ? res.json() : null)
+        .then(user => {
+          if (user) {
+            queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+            window.location.replace("/");
+          }
+        });
+    }
+  }, [queryClient]);
 
   const loginMutation = useMutation({
     mutationFn: async (data: { email: string; password: string }) => {
@@ -206,6 +221,23 @@ export default function Login() {
                 }
               </Button>
             </form>
+
+            <div className="mt-4">
+              <Button
+                variant="outline"
+                className="w-full flex items-center justify-center gap-2"
+                asChild
+              >
+                <a href="/api/auth/google">
+                  <img
+                    src="https://developers.google.com/identity/images/g-logo.png"
+                    alt="Google"
+                    className="w-5 h-5"
+                  />
+                  Continue with Google
+                </a>
+              </Button>
+            </div>
 
             <div className="mt-4 text-center">
               <p className="text-sm text-gray-600">

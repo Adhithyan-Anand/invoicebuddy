@@ -208,6 +208,10 @@ export class DatabaseStorage implements IStorage {
       logoUrl: invoice.companies.logoUrl,
       website: invoice.companies.website,
       taxNumber: invoice.companies.taxNumber,
+      bankName: 'bankName' in invoice.companies ? invoice.companies.bankName ?? null : null,
+      bankAccount: 'bankAccount' in invoice.companies ? invoice.companies.bankAccount ?? null : null,
+      bankIfsc: 'bankIfsc' in invoice.companies ? invoice.companies.bankIfsc ?? null : null,
+      bankUpi: 'bankUpi' in invoice.companies ? invoice.companies.bankUpi ?? null : null,
       createdAt: invoice.companies.createdAt,
       updatedAt: invoice.companies.updatedAt,
     } : undefined;

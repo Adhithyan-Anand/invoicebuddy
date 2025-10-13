@@ -11,6 +11,11 @@ export default function Settings() {
 
   const { data: company } = useQuery({
     queryKey: ["/api/company"],
+    queryFn: async () => {
+      const res = await fetch("/api/company", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch company data");
+      return res.json();
+    },
     retry: false,
   });
 

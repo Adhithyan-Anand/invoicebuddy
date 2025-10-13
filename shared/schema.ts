@@ -33,6 +33,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  google_id: varchar("google_id"), // allow null, unique constraint can be added in migration
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -48,6 +49,10 @@ export const companies = pgTable("companies", {
   logoUrl: varchar("logo_url"),
   website: varchar("website"),
   taxNumber: varchar("tax_number"),
+  bankName: varchar("bank_name", { length: 255 }),
+  bankAccount: varchar("bank_account", { length: 255 }),
+  bankIfsc: varchar("bank_ifsc", { length: 50 }),
+  bankUpi: varchar("bank_upi", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -185,6 +190,50 @@ export const quotationLineItemsRelations = relations(quotationLineItems, ({ one 
   }),
 }));
 
+/** Email Templates for customizable emails (invoice, quotation, payment confirmation)
+ * scopeType: 'user' | 'company' | 'customer'
+ * templateType: 'invoice_email' | 'quotation_email' | 'payment_confirmation_email'
+ */
+export const emailTemplates = pgTable(
+  "email_templates",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    scopeType: varchar("scope_type", { length: 20 }).notNull(),
+    scopeId: integer("scope_id"), // null when scopeType = 'user'
+    templateType: varchar("template_type", { length: 50 }).notNull(),
+    subject: varchar("subject", { length: 255 }).notNull(),
+    html: text("html").notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [index("IDX_email_templates_user").on(table.userId, table.templateType)],
+);
+
+/** Document appearance templates (PDF look/feel) for invoice/quotation
+ * scopeType: 'user' | 'company' | 'customer'
+ * docType: 'invoice' | 'quotation'
+ * settings: JSON object e.g. { primaryColor?: string, footerText?: string }
+ */
+export const documentTemplates = pgTable(
+  "document_templates",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    scopeType: varchar("scope_type", { length: 20 }).notNull(),
+    scopeId: integer("scope_id"), // null when scopeType = 'user'
+    docType: varchar("doc_type", { length: 20 }).notNull(),
+    settings: jsonb("settings").notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [index("IDX_document_templates_user").on(table.userId, table.docType)],
+);
+
 // Types
 export type InsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -206,6 +255,12 @@ export type InsertInvoiceLineItem = typeof invoiceLineItems.$inferInsert;
 
 export type QuotationLineItem = typeof quotationLineItems.$inferSelect;
 export type InsertQuotationLineItem = typeof quotationLineItems.$inferInsert;
+
+export type EmailTemplate = typeof emailTemplates.$inferSelect;
+export type InsertEmailTemplate = typeof emailTemplates.$inferInsert;
+
+export type DocumentTemplate = typeof documentTemplates.$inferSelect;
+export type InsertDocumentTemplate = typeof documentTemplates.$inferInsert;
 
 // Schemas for validation
 export const insertCompanySchema = createInsertSchema(companies).omit({

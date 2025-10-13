@@ -1,0 +1,22 @@
+{
+    "name": "invoice",
+    "engine": "handlebars",
+    "recipe": "chrome-pdf",
+    "data": {
+        "shortid": "aVcH5aH0m"
+    },
+    "shortid": "uC60qgY7_V",
+    "chrome": {
+        "printBackground": true
+    },
+    "creationDate": {
+        "$$date": 1760301193935
+    },
+    "modificationDate": {
+        "$$date": 1760301193935
+    },
+    "inheritedReadPermissions": [],
+    "inheritedEditPermissions": [],
+    "_id": "xzsnZm55E5XdJhQT",
+    "$entitySet": "templates"
+}

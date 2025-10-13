@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Invoice from {{company_name}}</title>
+</head>
+<body style="margin:0; padding:0; font-family: Arial, sans-serif; background-color:#f6f6f6;">
+
+  <table align="center" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px; margin:auto; background:#ffffff; border:1px solid #e0e0e0;">
+    <!-- Header -->
+    <tr>
+      <td style="background-color:#004aad; padding:20px; text-align:center; color:#ffffff;">
+        <h1 style="margin:0; font-size:22px;">{{company_name}}</h1>
+        <p style="margin:5px 0 0;">{{company_address}} | Contact: {{company_contact}}</p>
+      </td>
+    </tr>
+
+    <!-- Greeting -->
+    <tr>
+      <td style="padding:20px; color:#333333;">
+        <p>Dear <strong>{{customer_name}}</strong>,</p>
+        <p>Thank you for your recent purchase with <strong>{{company_name}}</strong>.<br>
+        Please find your invoice attached with this email for your reference.</p>
+      </td>
+    </tr>
+
+    <!-- Promo Section -->
+    <tr>
+      <td style="padding:20px; background-color:#f9f9f9; color:#333;">
+        <h2 style="margin-top:0; font-size:18px; color:#004aad;">🌟 Why Customers Choose Us</h2>
+        <ul style="margin:10px 0; padding-left:20px; line-height:1.6;">
+          <li>Solar Systems & Inverters</li>
+          <li>UPS Solutions</li>
+          <li>CCTV Installation & Monitoring</li>
+          <li>LED/LCD TVs & AWLC</li>
+          <li>Home Automation</li>
+          <li>Computers – Service & Installation</li>
+        </ul>
+        <p style="margin-top:10px;">We’re here to make your life smarter, safer, and more efficient.</p>
+      </td>
+    </tr>
+
+    <!-- Footer -->
+    <tr>
+      <td style="padding:20px; text-align:center; color:#555;">
+        <p style="margin:0; font-size:14px;">Stay connected with us for the latest offers and technology solutions.</p>
+        <p style="margin:5px 0 0; font-size:14px;"><strong>{{company_name}} Team</strong></p>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="background-color:#004aad; padding:15px; text-align:center; color:#ffffff; font-size:12px;">
+        © {{year}} {{company_name}}. All rights reserved.
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

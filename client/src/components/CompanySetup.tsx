@@ -23,6 +23,10 @@ const companySchema = z.object({
   website: z.string().url("Invalid website URL").optional().or(z.literal("")),
   taxNumber: z.string().optional(),
   logoUrl: z.string().optional(),
+  bankName: z.string().optional(),
+  bankAccount: z.string().optional(),
+  bankIfsc: z.string().optional(),
+  bankUpi: z.string().optional(),
 });
 
 interface CompanySetupProps {
@@ -45,6 +49,10 @@ export default function CompanySetup({ company }: CompanySetupProps) {
       website: company?.website || "",
       taxNumber: company?.taxNumber || "",
       logoUrl: company?.logoUrl || "",
+    bankName: company?.bankName || "",
+    bankAccount: company?.bankAccount || "",
+    bankIfsc: company?.bankIfsc || "",
+    bankUpi: company?.bankUpi || "",
     },
   });
 
@@ -170,12 +178,29 @@ export default function CompanySetup({ company }: CompanySetupProps) {
           {/* Company Logo */}
           <div className="space-y-4">
             <div className="flex items-center space-x-4">
-              <Avatar className="w-20 h-20">
-                <AvatarImage src={logoPreview || ""} alt="Company logo" />
-                <AvatarFallback className="bg-slate-100">
-                  <Building2 className="w-8 h-8 text-slate-400" />
-                </AvatarFallback>
-              </Avatar>
+              {logoPreview ? (
+                <div className="relative">
+                  <img
+                    src={logoPreview}
+                    alt="Company logo"
+                    className="h-20 w-20 object-contain rounded-lg border"
+                  />
+                  <button
+                    type="button"
+                    onClick={removeLogo}
+                    className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <Avatar className="w-20 h-20">
+                  <AvatarImage src="" alt="Company logo" />
+                  <AvatarFallback className="bg-slate-100">
+                    <Building2 className="w-8 h-8 text-slate-400" />
+                  </AvatarFallback>
+                </Avatar>
+              )}
               <div className="space-y-2">
                 <FormField
                   control={form.control}
@@ -185,22 +210,6 @@ export default function CompanySetup({ company }: CompanySetupProps) {
                       <FormLabel>Company Logo</FormLabel>
                       <FormControl>
                         <div className="flex items-center gap-4">
-                          {logoPreview && (
-                            <div className="relative">
-                              <img
-                                src={logoPreview}
-                                alt="Company logo"
-                                className="h-20 w-20 object-contain rounded-lg border"
-                              />
-                              <button
-                                type="button"
-                                onClick={removeLogo}
-                                className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
-                            </div>
-                          )}
                           <div>
                             <Input
                               id="logo"
@@ -328,6 +337,63 @@ export default function CompanySetup({ company }: CompanySetupProps) {
             )}
           />
 
+          {/* Bank Details */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="bankName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Bank Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Bank Name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="bankAccount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Account Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Account Number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="bankIfsc"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>IFSC Code</FormLabel>
+                  <FormControl>
+                    <Input placeholder="IFSC Code" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="bankUpi"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>UPI ID</FormLabel>
+                  <FormControl>
+                    <Input placeholder="UPI ID" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
           <div className="flex justify-end pt-6 border-t border-slate-200">
             <Button 
               type="submit" 
