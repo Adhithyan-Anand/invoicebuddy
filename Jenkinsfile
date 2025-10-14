@@ -92,10 +92,13 @@ pipeline {
     }
 
     post {
-        always {
-            // Clean up the workspace after the pipeline finishes
+    always {
+        // Assign an agent for the cleanup tasks
+        agent any
+        steps {
             echo 'Cleaning up the workspace.'
             cleanWs()
         }
     }
+  }
 }
