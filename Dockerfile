@@ -37,4 +37,4 @@ COPY --from=builder /app/dist ./dist
 EXPOSE 5000
 
 # The command to start your server in production
-CMD ["npm start"]
+CMD ["npm", "start"]
