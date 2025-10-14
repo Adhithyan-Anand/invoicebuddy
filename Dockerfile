@@ -1,37 +1,40 @@
-# --- Stage 1: Build the client assets ---
+# --- Stage 1: The Builder ---
+# This stage installs dependencies and builds the application.
 FROM node:20-alpine AS builder
+
+# Set an environment variable to ensure Puppeteer doesn't download Chrome
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 
 WORKDIR /app
 
-# Copy and install client dependencies
-COPY client/package*.json ./client/
-RUN cd client && npm install
+# Copy the package files and install ALL dependencies (including devDependencies for building)
+COPY package*.json ./
+RUN npm install --cache .npm-cache
 
-# Copy client source and build it
-COPY client/ ./client/
-RUN cd client && npm run build
+# Copy the rest of the source code
+COPY . .
+
+# Run the build script to compile the frontend and backend into the /dist folder
+RUN npm run build
 
 
-# --- Stage 2: Build the final production image ---
+# --- Stage 2: The Final Production Image ---
+# This stage creates the small, final image to be deployed.
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package.json for the server and install *only* production dependencies
+# Copy the package files again
 COPY package*.json ./
+
+# Install ONLY production dependencies to keep the image small
 RUN npm install --omit=dev
 
-# Copy the server source code
-COPY . .
+# Copy the built application from the 'builder' stage
+COPY --from=builder /app/dist ./dist
 
-# Copy the built client assets from the 'builder' stage
-COPY --from=builder /app/client/build ./client/build
-
-# Expose the correct port
+# Expose the port your server runs on
 EXPOSE 5000
 
-# Set production environment
-ENV NODE_ENV=production
-
-# Start the server using the production command
-CMD ["npm", "start"]
+# The command to start your server in production
+CMD ["node", "dist/index.js"]
