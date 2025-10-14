@@ -55,7 +55,17 @@ pipeline {
         stage('Deploy') {
             agent any
             steps {
-                echo 'Deploy stage is a placeholder. Add your deployment logic here.'
+                script {
+                    def imageName = "adhithyananand/invoicebuddy:${env.BUILD_NUMBER}"
+                    echo "Deploying ${imageName}..."
+                    
+                    // Stop and remove the old container if it exists, then run the new one
+                    sh """
+                        docker stop invoicebuddy-container || true
+                        docker rm invoicebuddy-container || true
+                        docker run -d --name invoicebuddy-container -p 5000:5000 --restart unless-stopped ${imageName}
+                    """
+                }
             }
         }
     }
