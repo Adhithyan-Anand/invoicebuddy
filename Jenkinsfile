@@ -92,13 +92,13 @@ pipeline {
     }
 
     post {
-    always {
-        // Assign an agent for the cleanup tasks
-        agent any
-        steps {
-            echo 'Cleaning up the workspace.'
-            cleanWs()
+        always {
+            // Allocate any available agent to run the cleanup steps
+            // This is the correct way to get an agent inside a post block
+            node {
+                echo 'Cleaning up the workspace.'
+                cleanWs()
+            }
         }
     }
-  }
 }
