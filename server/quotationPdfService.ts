@@ -1,19 +1,15 @@
-import { getJsreportInstance } from './localJsreport';
-import fs from 'fs/promises';
-import path from 'path';
+import axios from 'axios';
 
-const QUOTATION_TEMPLATE_PATH = path.resolve(__dirname, '../invoice-jsreport-template.handlebars'); // Use a different template if needed
+const jsreportUrl = process.env.JSREPORT_URL || 'https://jsreport.adhithyablogs.in/api/report';
+const jsreportUser = process.env.JSREPORT_USER || 'admin';
+const jsreportPassword = process.env.JSREPORT_PASSWORD || '';
+const QUOTATION_TEMPLATE_SHORTID = process.env.JSREPORT_QUOTATION_TEMPLATE_SHORTID || '1y6GWFJ';
 
 export async function renderQuotationPdf(quotationData: any) {
-  const jsreport = await getJsreportInstance();
-  const templateContent = await fs.readFile(QUOTATION_TEMPLATE_PATH, 'utf8');
-
-  // Ensure logoUrl is absolute if needed
   let company = quotationData.company || {};
   if (company.logoUrl && company.logoUrl.startsWith('/uploads/')) {
     company.logoUrl = `https://bills.adhithyaelectronics.in${company.logoUrl}`;
   }
-  // Ensure bank details are present
   const bankDetails = {
     bankName: company.bankName || '',
     bankAccount: company.bankAccount || '',
@@ -21,18 +17,22 @@ export async function renderQuotationPdf(quotationData: any) {
     bankUpi: company.bankUpi || ''
   };
 
-  const { stream } = await jsreport.render({
-    template: {
-      content: templateContent,
-      engine: 'handlebars',
-      recipe: 'chrome-pdf'
+  const response = await axios.post(
+    jsreportUrl,
+    {
+      template: { shortid: QUOTATION_TEMPLATE_SHORTID },
+      data: {
+        ...quotationData,
+        company: { ...company, ...bankDetails }
+      }
     },
-    data: {
-      ...quotationData,
-      company: { ...company, ...bankDetails }
-    },
-    options: { preview: false }
-  });
-
-  return stream;
+    {
+      responseType: 'stream',
+      auth: {
+        username: jsreportUser,
+        password: jsreportPassword
+      }
+    }
+  );
+  return response.data; // This is a readable stream
 }
