@@ -1,26 +1,37 @@
-# Use official Node.js LTS image
-FROM node:20-alpine
+# --- Stage 1: Build the client assets ---
+FROM node:20-alpine AS builder
 
-# Set working directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json
+# Copy and install client dependencies
+COPY client/package*.json ./client/
+RUN cd client && npm install
+
+# Copy client source and build it
+COPY client/ ./client/
+RUN cd client && npm run build
+
+
+# --- Stage 2: Build the final production image ---
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package.json for the server and install *only* production dependencies
 COPY package*.json ./
+RUN npm install --omit=dev
 
-# Install dependencies (including dev for build)
-RUN npm install
-
-# Copy the rest of the project files
+# Copy the server source code
 COPY . .
 
-# Build client (if using Vite/React)
-RUN if [ -f client/package.json ]; then cd client && npm install && npm run build && cd ..; fi
+# Copy the built client assets from the 'builder' stage
+COPY --from=builder /app/client/build ./client/build
 
-# Expose the port your server runs on (default: 5000)
+# Expose the correct port
 EXPOSE 5000
 
-# Set environment variables (override in docker-compose or at runtime)
+# Set production environment
 ENV NODE_ENV=production
 
-# Start the server
-CMD ["npm", "run", "dev"]
+# Start the server using the production command
+CMD ["npm", "start"]
