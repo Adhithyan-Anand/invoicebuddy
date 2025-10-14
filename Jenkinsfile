@@ -55,16 +55,22 @@ pipeline {
         stage('Deploy') {
             agent any
             steps {
-                script {
-                    def imageName = "adhithyananand/invoicebuddy:${env.BUILD_NUMBER}"
-                    echo "Deploying ${imageName}..."
-                    
-                    // Stop and remove the old container if it exists, then run the new one
-                    sh """
-                        docker stop invoicebuddy-container || true
-                        docker rm invoicebuddy-container || true
-                        docker run -d --name invoicebuddy-container -p 5000:5000 --restart unless-stopped ${imageName}
-                    """
+                // This block securely accesses the credential
+                withCredentials([file(credentialsId: 'invoicebuddy-env-file', variable: 'ENV_FILE_PATH')]) {
+                    script {
+                        def imageName = "adhithyananand/invoicebuddy:${env.BUILD_NUMBER}"
+                        echo "Deploying ${imageName}..."
+                        
+                        // The 'ENV_FILE_PATH' variable now holds the temporary path to your .env file.
+                        // We pass this path to Docker using the --env-file flag.
+                        sh """
+                            docker stop invoicebuddy-container || true
+                            docker rm invoicebuddy-container || true
+                            docker run -d --name invoicebuddy-container -p 5000:5000 \
+                            --env-file \$ENV_FILE_PATH \
+                            --restart unless-stopped ${imageName}
+                        """
+                    }
                 }
             }
         }
