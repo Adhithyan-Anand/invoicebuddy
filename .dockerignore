@@ -1,0 +1,39 @@
+# Ignore dependencies and build artifacts
+node_modules
+**/node_modules
+dist
+**/dist
+build
+**/build
+.npm-cache
+.pnpm-store
+.cache
+.eslintcache
+coverage
+tmp
+temp
+*.log
+
+# Frontend-specific artifacts
+client/node_modules
+client/dist
+
+# Server-specific artifacts
+server/node_modules
+server/dist
+
+# Git and editor files
+.git
+.gitignore
+.vscode
+.DS_Store
+
+# Environment files (use --env-file at runtime instead)
+.env
+.env.*
+!.env.example
+
+# OS/temporary files
+Thumbs.db
+*.swp
+*.swo

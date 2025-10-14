@@ -1,6 +1,6 @@
 # --- Stage 1: The Builder ---
 # This stage installs dependencies and builds the application.
-FROM node:20-alpine AS builder
+FROM node:20-bullseye-slim AS builder
 
 # Set an environment variable to ensure Puppeteer doesn't download Chrome
 ENV PUPPETEER_SKIP_DOWNLOAD=true
