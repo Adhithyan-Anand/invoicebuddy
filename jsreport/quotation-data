@@ -1,0 +1,50 @@
+{
+  "company": {
+    "name": "Adhithya Electronics Pvt Ltd",
+    "address": "123 Main Street, Chennai, TN 600001",
+    "phone": "+91 98472 44307",
+    "email": "support@adhithyaelectronics.in",
+    "website": "www.adhithyaelectronics.in",
+    "taxNumber": "GSTIN: 33AAAAA0000A1Z5",
+    "logoUrl": "https://bills.adhithyaelectronics.in/uploads/logo-1760368489799-602910330.png"
+  },
+  "customer": {
+    "name": "Anand Adhithyan",
+    "company": "Anand Enterprises",
+    "address": "456 Market Road, Coimbatore, TN 641001",
+    "phone": "+91 98765 43210",
+    "email": "anand@.com"
+  },
+  "quotation": {
+    "quotationNumber": "INV-2025-001",
+    "date": "2025-10-12T00:00:00.000Z",
+    "dueDate": "2025-10-27T00:00:00.000Z",
+    "subtotal": 11000,
+    "taxAmount": 1210,
+    "total": 12210,
+    "notes": "Payment due within 15 days. Please contact support for any queries.",
+    "lineItems": [
+      {
+        "description": "Dell Inspiron Laptop",
+        "quantity": 1,
+        "rate": 50000,
+        "amount": 50000,
+        "taxRate": 18
+      },
+      {
+        "description": "Wireless Mouse",
+        "quantity": 2,
+        "rate": 800,
+        "amount": 1600,
+        "taxRate": 18
+      },
+      {
+        "description": "HP Laser Printer",
+        "quantity": 1,
+        "rate": 12000,
+        "amount": 12000,
+        "taxRate": 18
+      }
+    ]
+  }
+}

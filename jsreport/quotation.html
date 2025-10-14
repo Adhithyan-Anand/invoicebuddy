@@ -1,0 +1,197 @@
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        color: #222;
+        margin: 0;
+        padding: 0;
+    }
+
+    .border {
+        border: 4px solid #222;
+        padding: 32px;
+        margin: 0 auto;
+        box-sizing: border-box;
+        width: 210mm;
+        /* A4 width */
+        min-height: 297mm;
+        /* A4 height */
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        /* pushes footer to bottom */
+    }
+
+    .header-table,
+    .meta-table,
+    .info-table,
+    .items-table,
+    .totals-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 16px;
+    }
+
+    .header-table td {
+        vertical-align: top;
+    }
+
+    .company-name {
+        font-size: 22px;
+        font-weight: bold;
+    }
+
+    .invoice-title {
+        font-size: 22px;
+        font-weight: bold;
+        text-align: right;
+    }
+
+    .meta-table td {
+        font-size: 12px;
+    }
+
+    .info-table th {
+        text-align: left;
+        font-size: 13px;
+        padding-bottom: 4px;
+    }
+
+    .info-table td {
+        font-size: 12px;
+    }
+
+    .items-table th,
+    .items-table td {
+        border: 1px solid #222;
+        padding: 6px 8px;
+        font-size: 11px;
+    }
+
+    .items-table th {
+        background: #f4f7fa;
+    }
+
+    .totals-table td {
+        font-size: 12px;
+        padding: 4px 8px;
+    }
+
+    .totals-table tr:last-child td {
+        font-weight: bold;
+        border-top: 2px solid #222;
+    }
+
+    .footer {
+        font-size: 10px;
+        text-align: center;
+        margin-top: 24px;
+        color: #666;
+    }
+
+    @media print {
+        body {
+            margin: 0;
+        }
+        .border {
+            page-break-after: always;
+        }
+    }
+</style>
+<div class="border">
+    <table class="header-table">
+        <tr>
+            <td style="width:80px;">
+                {{#if company.logoUrl}}
+                <img src="{{company.logoUrl}}" style="max-width:140px;max-height:100px;"> {{/if}}
+            </td>
+            <td>
+                <div class="company-name">{{company.name}}</div>
+                <div>{{company.address}}</div>
+                <div>{{company.phone}}</div>
+                <div>{{company.email}}</div>
+                <div>{{company.website}}</div>
+            </td>
+            <td style="text-align:right;">
+                <div class="invoice-title" style="text-align:left; margin-bottom: 10px;">QUOTATION</div>
+                <table class="meta-table">
+                    <tr>
+                        <td>Quotation #:</td>
+                        <td>{{quotationNumber}}</td>
+                    </tr>
+                    <tr>
+                        <td>Date:</td>
+                        <td>{{date date}}</td>
+                    </tr>
+                    <tr>
+                        <td>Valid Until:</td>
+                        <td>{{date validUntil}}</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <table class="info-table">
+        <tr>
+            <th>Quote To</th>
+        </tr>
+        <tr>
+            <td>
+                {{customer.name}}
+                <br> {{customer.company}}
+                <br> {{customer.address}}
+                <br> {{customer.phone}}
+                <br> {{customer.email}}
+            </td>
+        </tr>
+    </table>
+
+    <table class="items-table">
+        <tr>
+            <th>Description</th>
+            <th>Qty</th>
+            <th>Rate</th>
+            <th>Amount</th>
+        </tr>
+        {{#each lineItems}}
+        <tr>
+            <td>{{description}}</td>
+            <td style="text-align:center;">{{quantity}}</td>
+            <td style="text-align:center;">₹ {{rate}}</td>
+            <td style="text-align:left;">₹ {{amount}}</td>
+        </tr>
+        {{/each}}
+        <tr>
+            <td colspan="3" style="text-align:right;">Subtotal</td>
+            <td style="text-align:left;">₹ {{subtotal}}</td>
+        </tr>
+        <tr>
+            <td colspan="3" style="text-align:right;">Tax ({{lineItems.[0].taxRate}}%)</td>
+            <td style="text-align:left;">₹ {{taxAmount}}</td>
+        </tr>
+        <tr>
+            <td colspan="3" style="text-align:right;font-weight:bold;">Total</td>
+            <td style="text-align:left;font-weight:bold;">₹ {{total}}</td>
+        </tr>
+    </table>
+    <!-- Payment Details -->
+
+
+    <div style="margin-top:16px;">
+        <strong>Notes & Terms:</strong>
+        <br> {{notes}}
+        <br>Half of the amount should be paid in advance.</br>
+        <br>The products come with a one-year on-site warranty.</br>
+        <br>Please note that damages caused by lightning or similar external factors may not be covered under this warranty.</br>
+        <br> Thank you for your business!
+    </div>
+    <div style="text-align:right;" >
+
+        <strong>Authorised Signatory</strong>
+    </div>
+
+    <div class="footer">
+        <br>This is a computer generated quoation.</br>
+        <br>{{company.name}} | {{company.phone}} | {{company.website}} | {{company.email}}</br>
+    </div>
+</div>

@@ -1,0 +1,16 @@
+function beforeRender(req, res, done) {
+  // Inject helpers into the template
+  req.template.helpers = `
+    function date(value) {
+      if (!value) return '';
+      const d = new Date(value);
+      return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function formatCurrency(value) {
+      if (value == null || value === '') return '';
+      return '₹ ' + Number(value).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+  `;
+  done();
+}
