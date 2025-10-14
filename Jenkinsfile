@@ -30,10 +30,11 @@ pipeline {
     }
 
     stage('Lint & Test') {
+      when {
+        expression { false }
+      }
       steps {
-        // Uncomment if you have lint or test scripts
-        // sh 'npm run lint'
-        // sh 'npm test'
+        echo 'No lint or test steps defined'
       }
     }
 
