@@ -20,7 +20,7 @@ pipeline {
             steps {
                 dir('client') {
                     echo 'Installing dependencies and building the frontend...'
-                    sh 'npm install'
+                    sh 'npm install --cache .npm-cache'
                     sh 'npm run build'
                 }
                 // Save the built frontend assets to pass to the next stage
