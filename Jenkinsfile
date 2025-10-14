@@ -1,65 +1,37 @@
 pipeline {
-    // Define no global agent; each stage will define its own
-    agent none
+    agent none // Each stage will define its own agent
 
     stages {
         stage('Checkout') {
-            agent any // A simple agent is fine for just checking out code
+            agent any
             steps {
-                // Clean the workspace before checkout to ensure a fresh start
                 cleanWs()
                 checkout scm
             }
         }
 
-        stage('Build Frontend') {
-            // Use a specific Node.js environment for the frontend build
+        stage('Build Application') {
+            // Use a Node.js Docker container for the entire build process
             agent {
                 docker { image 'node:18-alpine' }
             }
             steps {
-                dir('client') {
-                    echo 'Installing dependencies and building the frontend...'
-                    sh 'PUPPETEER_SKIP_DOWNLOAD=true npm install --cache .npm-cache'
-                    sh 'npm run build'
-                }
-                // Save the built frontend assets to pass to the next stage
-                stash name: 'frontend-build', includes: 'client/build/**'
-            }
-        }
-
-        stage('Build Backend') {
-            // Use a specific Java & Maven environment for the backend build
-            agent {
-                docker { image 'maven:3.8-openjdk-17' }
-            }
-            steps {
-                // Retrieve the built frontend assets from the previous stage
-                unstash 'frontend-build'
-
-                // Copy the frontend build into the location Spring Boot serves static files from
-                echo 'Copying frontend assets to Spring Boot static directory...'
-                sh 'mkdir -p src/main/resources/static'
-                sh 'cp -r client/build/* src/main/resources/static/'
-
-                // Compile, test, and package the Java application into a .jar file
-                echo 'Compiling and packaging the backend...'
-                sh 'mvn clean package'
-
-                // Save the packaged .jar file to pass to the Docker build stage
-                stash name: 'java-build', includes: 'target/*.jar'
+                echo 'Installing dependencies and building the application...'
+                // These commands run at the project root, which is correct for your setup
+                sh 'PUPPETEER_SKIP_DOWNLOAD=true npm install --cache .npm-cache'
+                sh 'npm run build'
             }
         }
 
         stage('Build Docker Image') {
-            agent any // Use an agent that has Docker installed
+            // This stage runs on the main Jenkins agent, which has Docker access.
+            // It uses the workspace from the previous stage.
+            agent any
             steps {
-                // Retrieve the packaged .jar file
-                unstash 'java-build'
-                
                 script {
                     echo "Building Docker image..."
-                    // This will now succeed because the .jar file exists in target/
+                    // This command now works because 'npm run build' has created the 'dist' folder
+                    // and your Dockerfile is at the root of the workspace.
                     def dockerImage = docker.build("adhithyananand/invoicebuddy:${env.BUILD_NUMBER}", ".")
                 }
             }
@@ -67,10 +39,8 @@ pipeline {
 
         stage('Push Docker Image (Optional)') {
             agent any
-            // This 'when' block is a great way to make this stage conditional
             when { expression { return env.DOCKER_HUB_CREDENTIALS_ID } }
             steps {
-                // Use the credential ID from an environment variable for flexibility
                 withCredentials([usernamePassword(credentialsId: env.DOCKER_HUB_CREDENTIALS_ID, usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                     script {
                         def imageName = "adhithyananand/invoicebuddy:${env.BUILD_NUMBER}"
@@ -86,16 +56,13 @@ pipeline {
             agent any
             steps {
                 echo 'Deploy stage is a placeholder. Add your deployment logic here.'
-                // Example: sh 'ssh user@your-server "docker pull ... && docker run ..."'
             }
         }
     }
 
     post {
         always {
-            // Use a 'script' block to run scripted steps like 'node'
             script {
-                // Allocate any available agent to run the cleanup steps
                 node() {
                     echo 'Cleaning up the workspace.'
                     cleanWs()
