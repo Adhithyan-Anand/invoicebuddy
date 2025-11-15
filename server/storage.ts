@@ -342,8 +342,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Quotation operations
-  async getQuotationsByUserId(userId: number): Promise<Quotation[]> {
-    return await db.select().from(quotations).where(eq(quotations.userId, userId)).orderBy(desc(quotations.createdAt));
+  async getQuotationsByUserId(userId: number): Promise<(Quotation & { customer: Customer | null })[]> {
+    const result = await db
+      .select({
+        quotation: quotations,
+        customer: customers,
+      })
+      .from(quotations)
+      .leftJoin(customers, eq(quotations.customerId, customers.id))
+      .where(eq(quotations.userId, userId))
+      .orderBy(desc(quotations.createdAt));
+
+    return result.map(row => ({
+      ...row.quotation,
+      customer: row.customer,
+    }));
   }
 
   async getQuotationById(id: number, userId: number): Promise<Quotation | undefined> {

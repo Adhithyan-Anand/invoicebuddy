@@ -136,7 +136,7 @@ export default function Quotations() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Quotations</h1>
-          <p className="text-sm text-slate-600 mt-1">Create and manage quotations for potential clients</p>
+          <p className="text-sm text-slate-600 mt-1">Create and manage quotation for potential clients</p>
         </div>
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
           <DialogTrigger asChild>
