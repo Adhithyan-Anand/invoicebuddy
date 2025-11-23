@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -34,6 +35,11 @@ interface Invoice {
 export default function Invoices() {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<Invoice[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const searchTimeout = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
   const { data: invoices = [], isLoading } = useQuery<Invoice[]>({
@@ -171,6 +177,40 @@ export default function Invoices() {
     }
   };
 
+  // Debounced search effect
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearch(value);
+    setSearchError(null);
+
+    if (searchTimeout.current) {
+      clearTimeout(searchTimeout.current);
+    }
+
+    if (value.trim() === "") {
+      setSearchResults([]);
+      setSearchLoading(false);
+      return;
+    }
+
+    setSearchLoading(true);
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        const params = new URLSearchParams({ query: value });
+        const res = await fetch(`/api/invoices/search?${params.toString()}`, { credentials: "include" });
+        if (!res.ok) {
+          throw new Error("Failed to search invoices");
+        }
+        const data = await res.json();
+        setSearchResults(data.results || []);
+        setSearchLoading(false);
+      } catch (err) {
+        setSearchError("Failed to search invoices");
+        setSearchLoading(false);
+      }
+    }, 350); // 350ms debounce
+  };
+
   if (isLoading) {
     return (
       <div className="p-6">
@@ -190,30 +230,39 @@ export default function Invoices() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Invoices</h1>
           <p className="text-sm text-slate-600 mt-1">Manage your invoices and track payments</p>
         </div>
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary/90">
-              <Plus className="w-4 h-4 mr-2" />
-              New Invoice
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {selectedInvoice ? "Edit Invoice" : "Create New Invoice"}
-              </DialogTitle>
-            </DialogHeader>
-            <InvoiceForm
-              invoice={selectedInvoice}
-              onClose={handleFormClose}
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-4">
+          <Input
+            type="search"
+            placeholder="Search by invoice number or customer name"
+            value={search}
+            onChange={handleSearchChange}
+            className="w-full md:w-72"
+          />
+          <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-primary hover:bg-primary/90">
+                <Plus className="w-4 h-4 mr-2" />
+                New Invoice
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {selectedInvoice ? "Edit Invoice" : "Create New Invoice"}
+                </DialogTitle>
+              </DialogHeader>
+              <InvoiceForm
+                invoice={selectedInvoice}
+                onClose={handleFormClose}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Invoices Table */}
@@ -222,7 +271,91 @@ export default function Invoices() {
           <CardTitle>All Invoices</CardTitle>
         </CardHeader>
         <CardContent>
-          {invoices.length > 0 ? (
+          {searchLoading ? (
+            <div className="text-center py-8 text-slate-500">Searching...</div>
+          ) : searchError ? (
+            <div className="text-center py-8 text-red-500">{searchError}</div>
+          ) : search.trim() !== "" ? (
+            searchResults.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Invoice #</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Due Date</TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {searchResults.map((invoice: Invoice) => (
+                    <TableRow key={invoice.id}>
+                      <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
+                      <TableCell>{invoice.customer?.name || "Unknown"}</TableCell>
+                      <TableCell>₹{parseFloat(invoice.total).toLocaleString()}</TableCell>
+                      <TableCell>{getStatusBadge(invoice.status)}</TableCell>
+                      <TableCell>{new Date(invoice.date).toLocaleDateString()}</TableCell>
+                      <TableCell>{new Date(invoice.dueDate).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(invoice)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(invoice.id)}
+                            disabled={deleteMutation.isPending}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="Download PDF"
+                            onClick={() => handleDownload(invoice.id)}
+                          >
+                            <Download className="w-4 h-4" />
+                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleSendEmail(invoice.id)}
+                                    disabled={sendEmailMutation.isPending || !invoice.customer?.email}
+                                  >
+                                    <Mail className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {!invoice.customer?.email 
+                                  ? "Customer email is missing" 
+                                  : sendEmailMutation.isPending 
+                                    ? "Sending email..." 
+                                    : "Send invoice by email"}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-8 text-slate-500">No invoices found for "{search}"</div>
+            )
+          ) : invoices.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>

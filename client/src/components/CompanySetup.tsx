@@ -1,4 +1,5 @@
 import { useForm } from "react-hook-form";
+import { useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -49,12 +50,32 @@ export default function CompanySetup({ company }: CompanySetupProps) {
       website: company?.website || "",
       taxNumber: company?.taxNumber || "",
       logoUrl: company?.logoUrl || "",
-    bankName: company?.bankName || "",
-    bankAccount: company?.bankAccount || "",
-    bankIfsc: company?.bankIfsc || "",
-    bankUpi: company?.bankUpi || "",
+      bankName: company?.bankName || "",
+      bankAccount: company?.bankAccount || "",
+      bankIfsc: company?.bankIfsc || "",
+      bankUpi: company?.bankUpi || "",
     },
   });
+
+  // Reset form values when company prop changes
+  useEffect(() => {
+    if (company) {
+      form.reset({
+        name: company.name || "",
+        email: company.email || "",
+        phone: company.phone || "",
+        address: company.address || "",
+        website: company.website || "",
+        taxNumber: company.taxNumber || "",
+        logoUrl: company.logoUrl || "",
+        bankName: company.bankName || "",
+        bankAccount: company.bankAccount || "",
+        bankIfsc: company.bankIfsc || "",
+        bankUpi: company.bankUpi || "",
+      });
+      setLogoPreview(company.logoUrl || null);
+    }
+  }, [company]);
 
   const uploadLogo = async (file: File) => {
     const formData = new FormData();

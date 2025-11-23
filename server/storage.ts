@@ -83,6 +83,58 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Search invoices by invoice number or customer name (case-insensitive, partial match)
+  async searchInvoicesByUserId(
+    userId: number,
+    query: string,
+    limit: number = 20,
+    offset: number = 0
+  ): Promise<{ results: (Invoice & { customer: Customer | null })[]; total: number }> {
+    // Use ILIKE for case-insensitive search (Postgres)
+    const search = `%${query}%`;
+    // Get total count
+    const [{ count }] = await db
+      .select({ count: sql`count(*)`.as('count') })
+      .from(invoices)
+      .leftJoin(customers, eq(invoices.customerId, customers.id))
+      .where(
+        and(
+          eq(invoices.userId, userId),
+          sql`(
+            ${invoices.invoiceNumber} ILIKE ${search}
+            OR ${customers.name} ILIKE ${search}
+          )`
+        )
+      );
+    // Get paginated results
+    const result = await db
+      .select({
+        invoice: invoices,
+        customer: customers,
+      })
+      .from(invoices)
+      .leftJoin(customers, eq(invoices.customerId, customers.id))
+      .where(
+        and(
+          eq(invoices.userId, userId),
+          sql`(
+            ${invoices.invoiceNumber} ILIKE ${search}
+            OR ${customers.name} ILIKE ${search}
+          )`
+        )
+      )
+      .orderBy(desc(invoices.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return {
+      results: result.map(row => ({
+        ...row.invoice,
+        customer: row.customer ?? null,
+      })),
+      total: Number(count || 0),
+    };
+  }
   // User operations
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));

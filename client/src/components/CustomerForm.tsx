@@ -5,6 +5,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -12,11 +13,23 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 
 const customerSchema = z.object({
   name: z.string().min(1, "Name is required"),
+  isCompany: z.boolean(),
   company: z.string().optional(),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   phone: z.string().optional(),
   address: z.string().optional(),
-});
+}).refine(
+  (data) => {
+    if (data.isCompany) {
+      return !!data.company && data.company.trim().length > 0;
+    }
+    return true;
+  },
+  {
+    message: "Company name is required when 'Company' is selected",
+    path: ["company"],
+  }
+);
 
 interface CustomerFormProps {
   customer?: any;
@@ -30,6 +43,7 @@ export default function CustomerForm({ customer, onClose }: CustomerFormProps) {
     resolver: zodResolver(customerSchema),
     defaultValues: {
       name: customer?.name || "",
+      isCompany: !!customer?.company,
       company: customer?.company || "",
       email: customer?.email || "",
       phone: customer?.phone || "",
@@ -80,6 +94,11 @@ export default function CustomerForm({ customer, onClose }: CustomerFormProps) {
         value === "" ? null : value
       ])
     );
+
+    // If Individual is selected, set company to "Individual"
+    if (!cleanData.isCompany) {
+      cleanData.company = "Individual";
+    }
     
     createMutation.mutate(cleanData);
   };
@@ -104,18 +123,41 @@ export default function CustomerForm({ customer, onClose }: CustomerFormProps) {
 
           <FormField
             control={form.control}
-            name="company"
+            name="isCompany"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Company</FormLabel>
-                <FormControl>
-                  <Input placeholder="Acme Corporation" {...field} />
-                </FormControl>
-                <FormMessage />
+              <FormItem className="flex flex-col gap-2">
+                <FormLabel>Customer Type</FormLabel>
+                <div className="flex items-center gap-2">
+                  <span>Individual</span>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    id="isCompany"
+                  />
+                  <span>Company</span>
+                </div>
               </FormItem>
             )}
           />
         </div>
+
+        {form.watch("isCompany") && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="company"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Company Name *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Acme Corporation" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField

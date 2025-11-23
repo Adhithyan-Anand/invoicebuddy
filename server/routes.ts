@@ -314,6 +314,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Invoice search route
+  app.get('/api/invoices/search', authenticate as any, async (req: any, res: Response) => {
+    try {
+      const query = typeof req.query.query === "string" ? req.query.query : "";
+      const limit = req.query.limit ? parseInt(req.query.limit) : 20;
+      const offset = req.query.offset ? parseInt(req.query.offset) : 0;
+      if (!query.trim()) {
+        return res.status(400).json({ message: "Missing search query" });
+      }
+      const { results, total } = await dbStorage.searchInvoicesByUserId(req.user!.id, query, limit, offset);
+      res.json({ results, total });
+    } catch (error) {
+      console.error('Error searching invoices:', error);
+      res.status(500).json({ message: 'Failed to search invoices' });
+    }
+  });
+
   app.get('/api/invoices/next-number', authenticate as any, async (req: any, res: Response) => {
     try {
       const number = await dbStorage.getNextInvoiceNumber(req.user!.id);
