@@ -11,7 +11,8 @@ import {
   Settings,
   Menu,
   X,
-  LogOut
+  LogOut,
+  Rocket
 } from "lucide-react";
 
 interface LayoutProps {
@@ -29,6 +30,7 @@ export default function Layout({ children }: LayoutProps) {
     { name: "Quotations", href: "/quotations", icon: ClipboardList },
     { name: "Customers", href: "/customers", icon: Users },
     { name: "Settings", href: "/settings", icon: Settings },
+    { name: "AI Settings", href: "/settings/ai", icon: Rocket},
   ];
 
   return (

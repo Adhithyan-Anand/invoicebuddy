@@ -212,11 +212,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve uploaded files
   app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+  // Autocorrect endpoint
+  app.post('/api/autocorrect', authenticate as any, async (req: any, res: Response) => {
+    try {
+      const { texts } = req.body;
+      if (!Array.isArray(texts) || texts.length === 0) {
+        return res.status(400).json({ message: "No texts provided" });
+      }
+      // Get company and OpenAI API key
+      const company = await dbStorage.getCompanyByUserId(req.user!.id);
+      if (!company?.openAiApiKey) {
+        return res.status(400).json({ message: "OpenAI API key not set in company profile" });
+      }
+      // Call OpenAI API for autocorrect
+      const prompt = texts.map((t, i) => `Q${i + 1}: ${t}`).join('\n');
+      const systemPrompt =
+        company.openAiAutocorrectInstructions?.trim() ||
+        "You are a helpful assistant that corrects spelling and grammar mistakes in product names and short descriptions. Only return the corrected text, one per line, in the same order.";
+      const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${company.openAiApiKey}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4.1",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: prompt }
+          ],
+          max_tokens: 256,
+          temperature: 0.2,
+        }),
+      });
+      if (!openaiRes.ok) {
+        const err = await openaiRes.text();
+        return res.status(500).json({ message: "OpenAI API error", error: err });
+      }
+      const data = await openaiRes.json();
+      const output = data.choices?.[0]?.message?.content || "";
+      // Split output into lines, trim, and map to original order
+      const corrected = output.split('\n').map(line => line.replace(/^Q\d+:\s*/, '').trim()).filter(Boolean);
+      // Pad to match input length
+      while (corrected.length < texts.length) corrected.push("");
+      res.json({ corrected });
+    } catch (error) {
+      console.error("Autocorrect error:", error);
+      res.status(500).json({ message: "Failed to autocorrect", error: error instanceof Error ? error.message : error });
+    }
+  });
+
+  // AI Settings endpoints
+  app.get('/api/ai-settings', authenticate as any, async (req: any, res: Response) => {
+    try {
+      const company = await dbStorage.getCompanyByUserId(req.user!.id);
+      if (!company) return res.status(404).json({ message: "Company not found" });
+      let maskedKey = "";
+      if (company.openAiApiKey && typeof company.openAiApiKey === "string") {
+        const key = company.openAiApiKey;
+        maskedKey =
+          key.length > 8
+            ? key.slice(0, 4) + "****" + key.slice(-4)
+            : "****" + key.slice(-4);
+      }
+      res.json({
+        openAiApiKeySet: !!company.openAiApiKey,
+        maskedKey,
+        openAiAutocorrectInstructions: company.openAiAutocorrectInstructions || "",
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch AI settings" });
+    }
+  });
+
+  app.put('/api/ai-settings', authenticate as any, async (req: any, res: Response) => {
+    try {
+      const { openAiApiKey, openAiAutocorrectInstructions } = req.body;
+      const update: any = {};
+      if (typeof openAiApiKey === "string") update.openAiApiKey = openAiApiKey;
+      if (typeof openAiAutocorrectInstructions === "string") update.openAiAutocorrectInstructions = openAiAutocorrectInstructions;
+      const company = await dbStorage.updateCompany(req.user!.id, update);
+      res.json({
+        openAiApiKeySet: !!company.openAiApiKey,
+        openAiAutocorrectInstructions: company.openAiAutocorrectInstructions || "",
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update AI settings" });
+    }
+  });
+
   // Company routes
   app.get('/api/company', authenticate as any, async (req: any, res: Response) => {
     try {
       const company = await dbStorage.getCompanyByUserId(req.user!.id);
-      res.json(company);
+      if (company) {
+        // Do not expose openAiApiKey in GET response
+        const { openAiApiKey, ...safeCompany } = company;
+        res.json({
+          ...safeCompany,
+          openAiApiKeySet: typeof openAiApiKey === "string" && openAiApiKey.length > 0
+        });
+      } else {
+        res.json(null);
+      }
     } catch (error) {
       console.error('Error fetching company:', error);
       res.status(500).json({ message: 'Failed to fetch company' });

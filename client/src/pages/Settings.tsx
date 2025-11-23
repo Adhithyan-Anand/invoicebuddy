@@ -29,6 +29,7 @@ export default function Settings() {
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Settings</h1>
         <p className="text-sm text-slate-600 mt-1">Manage your account and company settings</p>
+        {/* AI Settings button removed; now only in sidebar */}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

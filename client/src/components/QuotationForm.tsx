@@ -301,10 +301,49 @@ export default function QuotationForm({ quotation, onClose }: QuotationFormProps
         <div>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-medium text-slate-900">Line Items</h3>
-            <Button type="button" variant="outline" onClick={addLineItem}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Item
-            </Button>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={addLineItem}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Item
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={async () => {
+                  // Gather all descriptions and notes
+                  const descriptions = lineItems.map(item => item.description);
+                  const notes = form.getValues("notes") || "";
+                  if (descriptions.every(desc => !desc.trim()) && !notes.trim()) {
+                    toast({ title: "Nothing to autocorrect", description: "Please enter product descriptions or notes first." });
+                    return;
+                  }
+                  try {
+                    toast({ title: "Autocorrecting...", description: "Checking for spelling mistakes..." });
+                    const texts = [...descriptions, notes];
+                    const res = await fetch("/api/autocorrect", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ texts }),
+                    });
+                    if (!res.ok) throw new Error("Failed to autocorrect");
+                    const { corrected } = await res.json();
+                    setLineItems(lineItems.map((item, idx) => ({
+                      ...item,
+                      description: corrected[idx] || item.description,
+                    })));
+                    // Last item is notes
+                    if (typeof corrected[descriptions.length] === "string") {
+                      form.setValue("notes", corrected[descriptions.length]);
+                    }
+                    toast({ title: "Autocorrected", description: "Descriptions and notes updated with corrections." });
+                  } catch (err) {
+                    toast({ title: "Error", description: "Failed to autocorrect descriptions/notes.", variant: "destructive" });
+                  }
+                }}
+              >
+                Auto-correct All
+              </Button>
+            </div>
           </div>
 
           <div className="border border-slate-200 rounded-lg overflow-hidden">

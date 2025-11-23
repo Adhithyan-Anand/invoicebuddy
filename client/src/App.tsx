@@ -12,6 +12,7 @@ import Invoices from "@/pages/Invoices";
 import Quotations from "@/pages/Quotations";
 import Customers from "@/pages/Customers";
 import Settings from "@/pages/Settings";
+import AISettings from "@/pages/AISettings";
 import Layout from "@/components/Layout";
 import PayInvoicePage from "@/pages/Pay";
 import ThankYou from "@/pages/ThankYou";
@@ -44,6 +45,7 @@ function Router() {
           <Route path="/quotations" component={Quotations} />
           <Route path="/customers" component={Customers} />
           <Route path="/settings" component={Settings} />
+          <Route path="/settings/ai" component={AISettings} />
           <Route path="/login" component={Dashboard} />
           <Route path="/register" component={Dashboard} />
         </Layout>

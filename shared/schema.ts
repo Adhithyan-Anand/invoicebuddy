@@ -53,6 +53,8 @@ export const companies = pgTable("companies", {
   bankAccount: varchar("bank_account", { length: 255 }),
   bankIfsc: varchar("bank_ifsc", { length: 50 }),
   bankUpi: varchar("bank_upi", { length: 255 }),
+  openAiApiKey: text("openai_api_key"),
+  openAiAutocorrectInstructions: text("openai_autocorrect_instructions"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
