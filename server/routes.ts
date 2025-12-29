@@ -680,10 +680,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!invoice) {
         return res.status(404).json({ message: 'Invoice not found' });
       }
+
+      // Get type from query, default to "full"
+      const type = typeof req.query.type === "string" && req.query.type === "minimal" ? "minimal" : "full";
       
       // Use jsreport cloud to render invoice PDF
       const { renderInvoicePdf } = await import('./invoicePdfService');
-      const pdfStream = await renderInvoicePdf(invoice);
+      const pdfStream = await renderInvoicePdf(invoice, type);
 
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename=invoice-${invoice.invoiceNumber}.pdf`);

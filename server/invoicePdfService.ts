@@ -6,8 +6,9 @@ const jsreportUrl = process.env.JSREPORT_URL || '';
 const jsreportUser = process.env.JSREPORT_USER || '';
 const jsreportPassword = process.env.JSREPORT_PASSWORD || '';
 const INVOICE_TEMPLATE_SHORTID = process.env.JSREPORT_INVOICE_TEMPLATE_SHORTID || '1y6GWFJ';
+const SIMPLE_INVOICE_TEMPLATE_SHORTID = process.env.JSREPORT_SIMPLE_INVOICE_TEMPLATE_SHORTID || '';
 
-export async function renderInvoicePdf(invoiceData: any) {
+export async function renderInvoicePdf(invoiceData: any, type: "full" | "minimal" = "full") {
   // Ensure logoUrl is absolute if needed (for jsreport cloud)
   let company = invoiceData.company || {};
   if (company.logoUrl && company.logoUrl.startsWith('/uploads/')) {
@@ -22,10 +23,16 @@ export async function renderInvoicePdf(invoiceData: any) {
     bankUpi: company.bankUpi || ''
   };
 
+  // Select template shortid based on type
+  let templateShortid = INVOICE_TEMPLATE_SHORTID;
+  if (type === "minimal" && SIMPLE_INVOICE_TEMPLATE_SHORTID) {
+    templateShortid = SIMPLE_INVOICE_TEMPLATE_SHORTID;
+  }
+
   const response = await axios.post(
     jsreportUrl,
     {
-      template: { shortid: INVOICE_TEMPLATE_SHORTID },
+      template: { shortid: templateShortid },
       data: {
         ...invoiceData,
         company: { ...company, ...bankDetails }

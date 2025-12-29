@@ -39,6 +39,8 @@ export default function Invoices() {
   const [searchResults, setSearchResults] = useState<Invoice[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [downloadModalOpen, setDownloadModalOpen] = useState(false);
+  const [downloadInvoiceId, setDownloadInvoiceId] = useState<number | null>(null);
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
@@ -146,9 +148,10 @@ export default function Invoices() {
     setSelectedInvoice(null);
   };
 
-  const handleDownload = async (id: number) => {
+  // Download handler with type selection
+  const handleDownload = async (id: number, type: "full" | "minimal") => {
     try {
-      const response = await fetch(`/api/invoices/${id}/pdf`, {
+      const response = await fetch(`/api/invoices/${id}/pdf?type=${type}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/pdf',
@@ -175,6 +178,8 @@ export default function Invoices() {
         variant: "destructive",
       });
     }
+    setDownloadModalOpen(false);
+    setDownloadInvoiceId(null);
   };
 
   // Debounced search effect
@@ -319,7 +324,10 @@ export default function Invoices() {
                             variant="ghost"
                             size="sm"
                             title="Download PDF"
-                            onClick={() => handleDownload(invoice.id)}
+                            onClick={() => {
+                              setDownloadInvoiceId(invoice.id);
+                              setDownloadModalOpen(true);
+                            }}
                           >
                             <Download className="w-4 h-4" />
                           </Button>
@@ -398,7 +406,10 @@ export default function Invoices() {
                           variant="ghost"
                           size="sm"
                           title="Download PDF"
-                          onClick={() => handleDownload(invoice.id)}
+                          onClick={() => {
+                            setDownloadInvoiceId(invoice.id);
+                            setDownloadModalOpen(true);
+                          }}
                         >
                           <Download className="w-4 h-4" />
                         </Button>
@@ -454,6 +465,32 @@ export default function Invoices() {
           )}
         </CardContent>
       </Card>
+      {/* Download Type Modal */}
+      <Dialog open={downloadModalOpen} onOpenChange={setDownloadModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Download Invoice</DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            <p className="mb-4">Which type of invoice do you want to download?</p>
+            <div className="flex flex-col gap-2">
+              <Button
+                className="w-full"
+                onClick={() => downloadInvoiceId && handleDownload(downloadInvoiceId, "full")}
+              >
+                Full Invoice
+              </Button>
+              <Button
+                className="w-full"
+                variant="secondary"
+                onClick={() => downloadInvoiceId && handleDownload(downloadInvoiceId, "minimal")}
+              >
+                Minimal Invoice
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
