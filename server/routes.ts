@@ -689,7 +689,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pdfStream = await renderInvoicePdf(invoice, type);
 
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename=invoice-${invoice.invoiceNumber}.pdf`);
+      // Sanitize customer name for filename
+      const customerName = invoice.customer?.name
+        ? invoice.customer.name.replace(/[^a-zA-Z0-9 _-]/g, '').replace(/\s+/g, '_')
+        : 'Customer';
+      res.setHeader('Content-Disposition', `attachment; filename=invoice-${customerName}-${invoice.invoiceNumber}.pdf`);
       pdfStream.pipe(res);
     } catch (error) {
       console.error('Error generating invoice PDF:', error);
@@ -714,7 +718,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pdfStream = await renderQuotationPdf(quotation);
 
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename=quotation-${quotation.quotationNumber}.pdf`);
+      // Sanitize customer name for filename
+      const customerName = quotation.customer?.name
+        ? quotation.customer.name.replace(/[^a-zA-Z0-9 _-]/g, '').replace(/\s+/g, '_')
+        : 'Customer';
+      res.setHeader('Content-Disposition', `attachment; filename=quotation-${customerName}-${quotation.quotationNumber}.pdf`);
       pdfStream.pipe(res);
     } catch (error) {
       console.error('Error generating quotation PDF:', error);
